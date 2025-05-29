@@ -15,7 +15,7 @@ class Program
             .BuildServiceProvider();
 
         var quoter = serviceProvider.GetRequiredService<YourQuoter>();
-        //quoter.Start();
+        quoter.Start();
         int qty = 120;
         string instrumentId = "DK50782120";
 
@@ -28,5 +28,6 @@ class Program
         Console.WriteLine($"\nQuote: {quote} (unit price: {quote / (double)qty})");
         Console.WriteLine($"VWAP : {vwap}");
         Console.WriteLine("Done.");
+        quoter.Dispose();
     }
 }
