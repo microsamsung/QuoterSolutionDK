@@ -27,16 +27,22 @@ namespace QuoterSolutionDK
 
         public void Start()
         {
-            _produceTask = Task.Run(() => ProduceOrdersAsync(_cts.Token));
-            _consumeTask = Task.Run(() => ConsumeOrdersAsync(_cts.Token));
-
-            _ = Task.WhenAll(_produceTask, _consumeTask).ContinueWith(t =>
-            {
-                if (t.Exception != null)
+            //_ = Task.Run(() => ProduceOrdersAsync(_cts.Token));
+            //_ = Task.Run(() => ConsumeOrdersAsync(_cts.Token));
+            
+            
+            _produceTask = ProduceOrdersAsync(_cts.Token);
+            _consumeTask = ConsumeOrdersAsync(_cts.Token);
+            
+            
+            _ = Task.WhenAll(_produceTask, _consumeTask)
+                .ContinueWith(t =>
                 {
-                    _logger.LogError(t.Exception, "One or more background tasks crashed!");
-                }
-            });
+                    if (t.Exception != null)
+                    {
+                        _logger.LogError(t.Exception, "Background tasks crashed!");
+                    }
+                }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         public void Stop()
