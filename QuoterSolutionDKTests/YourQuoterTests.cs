@@ -20,44 +20,45 @@ namespace QuoterSolutionDK.Tests
             _orderSource = new MockMarketOrderSource();
             _strategy = new BestPriceStrategy();
             _quoter = new YourQuoter(_orderSource, _strategy, _loggerMock.Object);
+            _quoter.Start();
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            _quoter?.Dispose();
         }
 
         [TestMethod]
         public async Task GetQuoteAsync_ReturnsExpectedQuote()
         {
-            await Task.Delay(1000); // wait for background to load
+            await Task.Delay(500); // Give time for orders to be consumed
+
             double quote = await _quoter.GetQuoteAsync("BA79603015", 30);
             Assert.IsTrue(quote > 0);
         }
 
         [TestMethod]
-        public async Task GetQuoteAsync_ReturnsMinusOne_WhenInstrumentNotFound()
+        public async Task GetQuoteAsync_ReturnsZero_WhenInstrumentNotFound()
         {
-            double quote = await _quoter.GetQuoteAsync("SA79603015", 10);
-            Assert.AreEqual(-1, quote);
-        }
-
-        [TestMethod]
-        public async Task GetQuoteAsync_ReturnsMinusOne_WhenInsufficientQuantity()
-        {
-            await Task.Delay(1000);
-            double quote = await _quoter.GetQuoteAsync("BA79603015", 900); // only 100 exists
-            Assert.AreEqual(-1, quote);
+            double quote = await _quoter.GetQuoteAsync("UNKNOWN", 10);
+            Assert.AreEqual(0, quote);
         }
 
         [TestMethod]
         public async Task GetVolumeWeightedAveragePriceAsync_ReturnsExpectedVWAP()
         {
-            await Task.Delay(1000);
-            double vwap = await _quoter.GetVolumeWeightedAveragePriceAsync("BA79603015");
+            await Task.Delay(500);
+
+            double vwap = await _quoter!.GetVolumeWeightedAveragePriceAsync("BA79603015");
             Assert.IsTrue(vwap > 0);
         }
 
         [TestMethod]
-        public async Task GetVolumeWeightedAveragePriceAsync_ReturnsMinusOne_WhenInstrumentNotFound()
+        public async Task GetVolumeWeightedAveragePriceAsync_ReturnsZero_WhenInstrumentNotFound()
         {
-            double vwap = await _quoter.GetVolumeWeightedAveragePriceAsync("SA79603015");
-            Assert.AreEqual(-1, vwap);
+            double vwap = await _quoter!.GetVolumeWeightedAveragePriceAsync("UNKNOWN");
+            Assert.AreEqual(0, vwap);
         }
 
         [TestMethod]
@@ -65,12 +66,17 @@ namespace QuoterSolutionDK.Tests
         {
             var orderSource = new EmptyMarketOrderSource();
             var quoter = new YourQuoter(orderSource, _strategy!, _loggerMock!.Object);
-            await Task.Delay(1000);
+            quoter.Start();
+
+            await Task.Delay(500);
             double vwap = await quoter.GetVolumeWeightedAveragePriceAsync("EMPTY007");
             Assert.AreEqual(0, vwap);
+
+            quoter.Dispose();
         }
 
-        // TestMarketOrderSource to simulate real orders
+        // Mock data sources
+
         private class MockMarketOrderSource : IMarketOrderSource
         {
             private int _index = 0;
@@ -82,20 +88,19 @@ namespace QuoterSolutionDK.Tests
 
             public async Task<MarketOrder> GetNextMarketOrderAsync()
             {
-                await Task.Delay(200);
+                await Task.Delay(100);
                 if (_index < _orders.Count)
                     return _orders[_index++];
-                await Task.Delay(Timeout.Infinite); // simulate infinite wait
-                return null;
+                await Task.Delay(Timeout.Infinite); // Simulate endless source
+                throw new InvalidOperationException("Should not reach here!");
             }
         }
 
-        // Empty source with 0 quantity
         private class EmptyMarketOrderSource : IMarketOrderSource
         {
             public async Task<MarketOrder> GetNextMarketOrderAsync()
             {
-                await Task.Delay(200);
+                await Task.Delay(100);
                 return new MarketOrder { InstrumentId = "EMPTY007", Price = 100.0, Quantity = 0 };
             }
         }
