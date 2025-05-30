@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using QuoterSolutionDK.Contract;
 using QuoterSolutionDK.Entity;
 using System.Collections.Concurrent;
